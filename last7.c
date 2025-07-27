@@ -1,53 +1,3 @@
-
-
-// 64线程 2MB
-// real    0m1.390s
-// user    0m0.002s
-// sys     0m0.000s
-// 64线程 3MB
-// real    0m1.335s
-// user    0m0.002s
-// sys     0m0.000s
-// 64线程 4MB
-// real    0m1.342s
-// user    0m0.000s
-// sys     0m0.001s
-// 64线程 5MB
-// real    0m1.334s
-// user    0m0.001s
-// sys     0m0.000s
-// 64线程 6MB
-// real    0m1.348s
-// user    0m0.001s
-// sys     0m0.000s
-// 64线程 8MB
-// real    0m1.368s
-// user    0m0.001s
-// sys     0m0.000s
-// 32 线程 2MB
-// real    0m1.371s
-// user    0m0.000s
-// sys     0m0.002s
-// 32 线程 3MB
-// real    0m1.364s
-// user    0m0.000s
-// sys     0m0.001s
-// 32 线程 4MB
-// real    0m1.363s
-// user    0m0.002s
-// sys     0m0.000s
-// 32 线程 5MB
-// real    0m1.393s
-// user    0m0.001s
-// sys     0m0.001s
-// 32 线程 6MB
-// real    0m1.397s
-// user    0m0.002s
-// sys     0m0.000s
-// 32 线程 8MB
-// real    0m1.370s
-// user    0m0.002s
-// sys     0m0.000s
 #include <fcntl.h>
 #include <pthread.h>
 #include <stdatomic.h>
@@ -103,7 +53,6 @@ static const long MASK2[] = {
     0xFFFFFFFFFFFFFFFFL 
 };
 
-// 函数声明
 static struct Group *find_result(long initial_word, long initial_delimiter_mask, long word_b, long delimiter_mask_b, 
                                 const char **s_ptr, struct Result *result);
 static const char *parse_number(int *dest, const char *s);
@@ -240,7 +189,6 @@ static struct Group *find_result(long initial_word, long initial_delimiter_mask,
     int name_length = (int)(*s_ptr - name_address);
     unsigned int table_index = hash_to_index(hash);
 
-    // 修复：确保线性探测的冲突处理
     while (1) {
         if (result->map[table_index] == 0) {
             existing_group = new_entry(result, name_address, table_index, name_length);
@@ -249,7 +197,6 @@ static struct Group *find_result(long initial_word, long initial_delimiter_mask,
         
         existing_group = &result->groups[result->map[table_index]];
         
-        // 检查是否匹配
         if (existing_group->name_length == name_length && 
             memcmp(existing_group->nameAddress, name_address, name_length) == 0) {
             break;
@@ -261,7 +208,6 @@ static struct Group *find_result(long initial_word, long initial_delimiter_mask,
     return existing_group;
 }
 
-// 1. 修改主处理循环以一次处理三行
 static void *process_chunk(void *_data) {
     char *data = (char *)_data;
     struct Result *result = malloc(sizeof(*result));
@@ -285,7 +231,6 @@ static void *process_chunk(void *_data) {
         const char *segment_start = chunk_start > 0 ? next_new_line(&data[chunk_start], &data[chunk_end]) : &data[chunk_start];
         const char *segment_end = chunk_end >= sz ? &data[sz] : next_new_line(&data[chunk_end], &data[sz]);
         
-        // 将段分成三个子段
         size_t dist = (segment_end - segment_start) / 3;
         const char *mid_point1 = next_new_line(segment_start + dist, segment_end);
         const char *mid_point2 = next_new_line(segment_start + dist + dist, segment_end);
@@ -293,35 +238,34 @@ static void *process_chunk(void *_data) {
         const char *s1 = segment_start;
         const char *s2 = mid_point1 < segment_end ? mid_point1 + 1 : segment_end;
         const char *s3 = mid_point2 < segment_end ? mid_point2 + 1 : segment_end;
-        
-        // 同时处理三个子段的行 - 采用指令级并行优化
+
         while (s1 < mid_point1 && s2 < mid_point2 && s3 < segment_end) {
-            // 批量读取第一个word
+
             long word1_1 = *(long *)s1;
             long word1_2 = *(long *)s2;
             long word1_3 = *(long *)s3;
-            // 批量查找分隔符
+
             long delimiter_mask1_1 = find_delimiter(word1_1);
             long delimiter_mask1_2 = find_delimiter(word1_2);
             long delimiter_mask1_3 = find_delimiter(word1_3);
-            // 批量读取第二个word
+
             long word2_1 = *(long *)(s1 + 8);
             long word2_2 = *(long *)(s2 + 8);
             long word2_3 = *(long *)(s3 + 8);
-            // 批量查找第二个分隔符
+
             long delimiter_mask2_1 = find_delimiter(word2_1);
             long delimiter_mask2_2 = find_delimiter(word2_2);
             long delimiter_mask2_3 = find_delimiter(word2_3);
-            // 批量查找结果
+
             struct Group *group1 = find_result(word1_1, delimiter_mask1_1, word2_1, delimiter_mask2_1, &s1, result);
             struct Group *group2 = find_result(word1_2, delimiter_mask1_2, word2_2, delimiter_mask2_2, &s2, result);
             struct Group *group3 = find_result(word1_3, delimiter_mask1_3, word2_3, delimiter_mask2_3, &s3, result);
-            // 批量解析数字
+
             int temperature1, temperature2, temperature3;
             s1 = parse_number(&temperature1, s1);
             s2 = parse_number(&temperature2, s2);
             s3 = parse_number(&temperature3, s3);
-            // 批量更新统计数据
+
             group1->count += 1;
             group2->count += 1;
             group3->count += 1;
@@ -338,7 +282,6 @@ static void *process_chunk(void *_data) {
             group3->sum += temperature3;
         }
         
-        // 处理剩余的行
         while (s1 < mid_point1) {
             long word1 = *(long *)s1;
             long delimiter_mask1 = find_delimiter(word1);
@@ -404,7 +347,6 @@ static void result_to_str(char *dest, const struct Result *result, size_t max_si
         memcpy(temp_name, result->groups[i].nameAddress, copy_len);
         temp_name[copy_len] = '\0';
         
-        // 使用 snprintf 来防止缓冲区溢出
         int n = snprintf(
             dest + pos, max_size - pos, "%s=%.1f/%.1f/%.1f%s", temp_name,
             (float)result->groups[i].min / 10.0,
@@ -415,7 +357,6 @@ static void result_to_str(char *dest, const struct Result *result, size_t max_si
         if (n > 0 && (size_t)n < max_size - pos) {
             pos += n;
         } else {
-            // 缓冲区不够，停止输出
             break;
         }
     }
@@ -432,7 +373,6 @@ static void result_to_str(char *dest, const struct Result *result, size_t max_si
 static inline unsigned int *hashmap_entry(struct Result *result, const struct Group *b) {
     long hash = b->firstNameWord ^ b->secondNameWord;
     
-    // 如果名字长度超过16，需要重新计算hash
     if (b->name_length > 16) {
         const char *p = b->nameAddress + 16;
         int remaining = b->name_length - 16;
@@ -465,7 +405,6 @@ static inline unsigned int *hashmap_entry(struct Result *result, const struct Gr
 
 
 int main(int argc, char **argv) {
-    // 首先获取文件信息，避免在fork后处理可能有问题的系统调用
     char *file = "measurements.txt";
     if (argc > 1) {
         file = argv[1];
@@ -529,7 +468,6 @@ int main(int argc, char **argv) {
     chunk_size = 5 * 1024 * 1024; 
     chunk_count = (sz + chunk_size - 1) / chunk_size;
     
-    // 重置原子计数器
     atomic_store(&chunk_selector, 0);
     
     pthread_t workers[NTHREADS];
@@ -599,3 +537,51 @@ int main(int argc, char **argv) {
     
     return EXIT_SUCCESS;
 }
+// 64 Thread 2MB
+// real    0m1.390s
+// user    0m0.002s
+// sys     0m0.000s
+// 64 Thread 3MB
+// real    0m1.335s
+// user    0m0.002s
+// sys     0m0.000s
+// 64 Thread 4MB
+// real    0m1.342s
+// user    0m0.000s
+// sys     0m0.001s
+// 64 Thread 5MB
+// real    0m1.334s
+// user    0m0.001s
+// sys     0m0.000s
+// 64 Thread 6MB
+// real    0m1.348s
+// user    0m0.001s
+// sys     0m0.000s
+// 64 Thread 8MB
+// real    0m1.368s
+// user    0m0.001s
+// sys     0m0.000s
+// 32 Thread 2MB
+// real    0m1.371s
+// user    0m0.000s
+// sys     0m0.002s
+// 32 Thread 3MB
+// real    0m1.364s
+// user    0m0.000s
+// sys     0m0.001s
+// 32 Thread 4MB
+// real    0m1.363s
+// user    0m0.002s
+// sys     0m0.000s
+// 32 Thread 5MB
+// real    0m1.393s
+// user    0m0.001s
+// sys     0m0.001s
+// 32 Thread 6MB
+// real    0m1.397s
+// user    0m0.002s
+// sys     0m0.000s
+// 32 Thread 8MB
+// real    0m1.370s
+// user    0m0.002s
+// sys     0m0.000s
