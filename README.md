@@ -4,7 +4,7 @@
 
 **Official challenge repository:** https://github.com/gunnarmorling/1brc
 
-**My implementation blog post (in-depth write-up):** https://www.dannyvankooten.com/blog/2024/1brc/
+**My implementation blog post (in-depth write-up):**
 
 ## **Generate the measurements file (1 billion rows)**
 
