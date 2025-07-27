@@ -4,7 +4,7 @@
 
 **Official challenge repository:** https://github.com/gunnarmorling/1brc
 
-**My implementation blog post (in-depth write-up):**
+**My implementation blog post (in-depth write-up):** https://blog.csdn.net/weixin_74039195/article/details/149685575?fromshare
 
 ## **Generate the measurements file (1 billion rows)**
 
