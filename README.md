@@ -48,7 +48,7 @@ sys     0m0.000s
 
 My test environment: 32 vCPUs, AMD EPYC 9654 96-Core Processor, 60GB RAM.
 
-The best result I’ve achieved so far is **1.363 seconds**. However, since this is a rented server with only 32 cores in use (and some resources shared with other workloads), the performance might not be entirely stable.
+The best result I’ve achieved so far is **1.271 seconds**. However, since this is a rented server with only 32 cores in use (and some resources shared with other workloads), the performance might not be entirely stable.
 
 The current top score on the leaderboard is **1.535 seconds**.
  If anyone has access to the official benchmark setup (32-core AMD EPYC™ 7502P (Zen2), 128GB RAM), feel free to test it and see if this version can take the lead :)
