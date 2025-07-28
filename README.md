@@ -33,7 +33,7 @@ gcc -o last7 last7.c -pthread
 Then, execute the benchmark:
 
 ```c
-time ./last measurements.txt >/dev/null
+time ./last7 measurements.txt >/dev/null
 ```
 
 Example output:
